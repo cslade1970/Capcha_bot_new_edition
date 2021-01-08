@@ -3,6 +3,8 @@ import threading
 
 import psycopg2
 
+import os
+
 from random import randint
 from datetime import datetime, timedelta
 
@@ -13,6 +15,7 @@ from telegram.error import BadRequest
 
 class FilterNewChatMembers(BaseFilter):
     ''' Фильтрация сообщений о входе '''
+
     def __init__(self):
         # Пользователи проходящие проверку капчей
         self.status_members = ['member', 'restricted', 'left', 'kicked']
@@ -30,7 +33,8 @@ class FilterNewChatMembers(BaseFilter):
                 if cur.fetchone():
                     return False
 
-            member_status = message.bot.getChatMember(chat_id, user_id)['status']
+            member_status = message.bot.getChatMember(chat_id, user_id)[
+                'status']
             if member_status in self.status_members:
                 return True
         return False
@@ -54,7 +58,8 @@ def banUser():
                     "chat_id": banrecord[3],
                     "captcha_message_id": banrecord[4]
                 }
-                cur.execute('DELETE FROM banlist WHERE id=%s', (ban['id_record'], ))
+                cur.execute('DELETE FROM banlist WHERE id=%s',
+                            (ban['id_record'], ))
                 con.commit()
                 dispatcher.bot.kick_chat_member(
                     ban['chat_id'],
@@ -72,7 +77,7 @@ def captcha(update, context):
     user = update.effective_user
     chat = update.effective_chat
     captcha_answer = randint(1, 8)
-    kick_date = (update.message.date + timedelta(days=1)).replace(tzinfo=None)
+    kick_date = (update.message.date + timedelta(hours=1)).replace(tzinfo=None)
 
     if update.effective_user.username:
         username = "@" + user.username
@@ -80,7 +85,7 @@ def captcha(update, context):
         try:
             username = " ".join([user.first_name, user.last_name])
         except:
-            username = "*какая-то дичь, а не ник*"
+            username = "*какой-то undefined, а не ник*"
 
     keyboard = InlineKeyboardMarkup([[
         InlineKeyboardButton(i, callback_data=str(i)) for i in range(1, 9)
@@ -143,19 +148,18 @@ def checkCorrectlyCaptcha(update, context):
                         can_add_web_page_previews=True,
                     )
                 )
-# Если после входа пользователя в чат вы хотите что-то ему сказать - раскомментируйте фрагмент кода ниже
-#               try:
-#                   if update.effective_user.username:
-#                       username = "@" + user.username
-#                   else:
-#                       username = " ".join([user.first_name, user.last_name])
-#               except:
-#                   username = "*какая-то дичь, а не ник*"
-# 
-#               context.bot.send_message(
-#                   chat_id=update.effective_chat.id,
-#                   text="%s, добро пожаловать в чатик. Будь добр(а) прочесть правила" % username
-#               ) 
+                try:
+                    if update.effective_user.username:
+                        username = "@" + user.username
+                    else:
+                        username = " ".join([user.first_name, user.last_name])
+                except:
+                    username = "*какой-то undefined, а не ник*"
+
+                context.bot.send_message(
+                    chat_id=update.effective_chat.id,
+                    text="Добро пожаловать в чат, %s, пожалуйста, при входе напишите кратко (а лучше нет) вашу историю с хештегами (без скобочек): (#)intro, (#)специализация, (#)локация." % username
+                )
             else:
                 if update.effective_user.username:
                     username = "@" + user.username
@@ -163,12 +167,7 @@ def checkCorrectlyCaptcha(update, context):
                     try:
                         username = " ".join([user.first_name, user.last_name])
                     except:
-                        username = "*какая-то дичь, а не ник*"
-
-                context.bot.send_message(
-                    chat_id=update.effective_chat.id,
-                    text="%s, капча введена не правильно, обратитесь к админу в течение 3-х дней для разблокировки." % username
-                )
+                        username = "*какой-то undefined, а не ник*"
                 cur.execute(
                     'UPDATE banlist SET time=%s WHERE user_id=%s AND chat_id=%s',
                     (datetime.now(tz=None)+timedelta(days=3), user.id, chat.id)
@@ -181,7 +180,8 @@ def unban(update, context):
     chat = update.effective_chat
     command_user = update.effective_user
     message = update.effective_message
-    member_status = message.bot.getChatMember(chat.id, command_user.id)['status']
+    member_status = message.bot.getChatMember(
+        chat.id, command_user.id)['status']
 
     # Будет выполнено только если комманду прислал администратор
     if member_status in ['owner', 'administrator', 'creator']:
@@ -236,10 +236,9 @@ def main():
     привязываем обработчики и фильтры.
     '''
 
-    updater = Updater(token="your_token")
+    updater = Updater(token=os.getenv('TG_BOT_TOKEN', ""))
     dispatcher = updater.dispatcher
     filter = FilterNewChatMembers()
-
 
     dispatcher.add_handler(MessageHandler(filter, captcha))
     dispatcher.add_handler(CallbackQueryHandler(checkCorrectlyCaptcha))
@@ -252,11 +251,11 @@ def main():
 if __name__ == "__main__":
     # Connect to DB
     con = psycopg2.connect(
-        database="database",
-        user="user",
-        password="password",
-        host="host",
-        port="5432"
+        database=os.getenv('PG_DATABASE', "captcha"),
+        user=os.getenv('PG_USER', "captcha"),
+        password=os.getenv('PG_PASSWORD', "secret"),
+        host=os.getenv('PG_HOST', "postgres"),
+        port=os.getenv('PG_PORT', "5432")
     )
 
     # Словарь для конвертация цифр на слова

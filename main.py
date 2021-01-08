@@ -1,3 +1,4 @@
+import os
 import threading
 import time
 from datetime import datetime, timedelta
@@ -99,7 +100,7 @@ def captcha(update: Update, context: CallbackContext):
         try:
             username = " ".join([user.first_name, user.last_name])
         except Exception:
-            username = "*какая-то дичь, а не ник*"
+            username = "*какая-то undefined, а не ник*"
 
     keyboard = InlineKeyboardMarkup(
         [[InlineKeyboardButton(i, callback_data=str(i)) for i in range(1, 9)]]
@@ -169,19 +170,19 @@ def checkCorrectlyCaptcha(update, context):
                         can_add_web_page_previews=True,
                     ),
                 )
-            # Если после входа пользователя в чат вы хотите что-то ему сказать - раскомментируйте фрагмент кода ниже
-            #               try:
-            #                   if update.effective_user.username:
-            #                       username = "@" + user.username
-            #                   else:
-            #                       username = " ".join([user.first_name, user.last_name])
-            #               except:
-            #                   username = "*какая-то дичь, а не ник*"
-            #
-            #               context.bot.send_message(
-            #                   chat_id=update.effective_chat.id,
-            #                   text="%s, добро пожаловать в чатик. Будь добр(а) прочесть правила" % username
-            #               )
+                try:
+                    if update.effective_user.username:
+                        username = "@" + user.username
+                    else:
+                        username = " ".join([user.first_name, user.last_name])
+                except Exception:
+                    username = "*какой-то undefined, а не ник*"
+
+                context.bot.send_message(
+                    chat_id=update.effective_chat.id,
+                    text="Добро пожаловать в чат, %s, пожалуйста, при входе напишите кратко (а лучше нет) вашу историю с хештегами (без скобочек): (#)intro, (#)специализация, (#)локация."
+                    % username,
+                )
             else:
                 if update.effective_user.username:
                     username = "@" + user.username
@@ -189,13 +190,7 @@ def checkCorrectlyCaptcha(update, context):
                     try:
                         username = " ".join([user.first_name, user.last_name])
                     except Exception:
-                        username = "*какая-то дичь, а не ник*"
-
-                context.bot.send_message(
-                    chat_id=update.effective_chat.id,
-                    text="%s, капча введена неправильно, обратитесь к админу в течение 3-х дней для разблокировки."
-                    % username,
-                )
+                        username = "*какая-то undefined, а не ник*"
                 cur.execute(
                     "UPDATE banlist SET time=%s WHERE user_id=%s AND chat_id=%s",
                     (datetime.now(tz=None) + timedelta(days=3), user.id, chat.id),
@@ -264,7 +259,7 @@ def main():
     привязываем обработчики и фильтры.
     """
 
-    updater = Updater(token="your_token")
+    updater = Updater(token=os.getenv("TG_BOT_TOKEN", ""))
     dispatcher = updater.dispatcher
     filter = FilterNewChatMembers()
 
@@ -279,7 +274,11 @@ def main():
 if __name__ == "__main__":
     # Connect to DB
     con = psycopg2.connect(
-        database="database", user="user", password="password", host="host", port="5432"
+        database=os.getenv("PG_DATABASE", "captcha"),
+        user=os.getenv("PG_USER", "captcha"),
+        password=os.getenv("PG_PASSWORD", "secret"),
+        host=os.getenv("PG_HOST", "postgres"),
+        port=os.getenv("PG_PORT", "5432"),
     )
 
     # Словарь для конвертация цифр на слова

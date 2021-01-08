@@ -1,3 +1,4 @@
+import logging
 import os
 import threading
 import time
@@ -17,6 +18,9 @@ from telegram.ext import (
 )
 
 CAPTCHA_REPLY_TIMEOUT = 2  # minutes
+
+logging.basicConfig()
+logger = logging.getLogger()
 
 
 class FilterNewChatMembers(BaseFilter):
@@ -69,14 +73,22 @@ def banUser():
                 }
                 cur.execute("DELETE FROM banlist WHERE id=%s", (ban["id_record"],))
                 con.commit()
-                dispatcher.bot.kick_chat_member(ban["chat_id"], ban["user_id"])
+                try:
+                    dispatcher.bot.kick_chat_member(
+                        chat_id=ban["chat_id"], user_id=ban["user_id"]
+                    )
+                except Exception:
+                    logger.exception(f"Can't kick user user_id={ban['user_id']}")
+
                 # Clean up in the chat
                 try:
                     dispatcher.bot.delete_message(
                         ban["chat_id"], ban["captcha_message_id"]
                     )
                 except BadRequest:
-                    pass
+                    logger.exception(
+                        f"Can't kick user user_id={ban['user_id']}, message_id={ban['captcha_message_id']}"
+                    )
 
 
 def captcha(update: Update, context: CallbackContext):

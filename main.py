@@ -19,7 +19,7 @@ from telegram.ext import (
 
 CAPTCHA_REPLY_TIMEOUT = 2  # minutes
 
-logging.basicConfig()
+logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger()
 
 
@@ -286,6 +286,7 @@ def main():
 
 if __name__ == "__main__":
     # Connect to DB
+    logger.info("Connecting to PG")
     con = psycopg2.connect(
         database=os.getenv("PG_DATABASE", "captcha"),
         user=os.getenv("PG_USER", "captcha"),
@@ -306,8 +307,10 @@ if __name__ == "__main__":
         8: "восемь",
     }
 
+    logger.info("Starting ban thread")
     # Второстепенный поток бана пользователей
     threading.Thread(target=banUser).start()
 
     # Тело бота
+    logger.info("Starting main bot process")
     main()

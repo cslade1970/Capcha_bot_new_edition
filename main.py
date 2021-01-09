@@ -60,6 +60,7 @@ def banUser():
 
     while True:
         time.sleep(30)
+        logger.info("30s cycle of ban thread")
         with con.cursor() as cur:
             cur.execute(
                 "SELECT id, user_id, chat_id, captcha_message_id FROM banlist WHERE time<LOCALTIMESTAMP"

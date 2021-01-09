@@ -2,7 +2,7 @@ import logging
 import os
 import threading
 import time
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, now
 from random import randint
 
 import psycopg2
@@ -102,7 +102,7 @@ def captcha(update: Update, context: CallbackContext):
     chat = update.effective_chat
     captcha_answer = randint(1, 8)
     kick_date = (
-        update.message.date + timedelta(minutes=CAPTCHA_REPLY_TIMEOUT)
+        now() + timedelta(minutes=CAPTCHA_REPLY_TIMEOUT)
     ).replace(tzinfo=None)
     message = update.effective_message
 

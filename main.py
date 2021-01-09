@@ -2,7 +2,7 @@ import logging
 import os
 import threading
 import time
-from datetime import datetime, timedelta, now
+from datetime import datetime, timedelta
 from random import randint
 
 import psycopg2

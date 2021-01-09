@@ -102,7 +102,7 @@ def captcha(update: Update, context: CallbackContext):
     chat = update.effective_chat
     captcha_answer = randint(1, 8)
     kick_date = (
-        now() + timedelta(minutes=CAPTCHA_REPLY_TIMEOUT)
+        datetime.now() + timedelta(minutes=CAPTCHA_REPLY_TIMEOUT)
     ).replace(tzinfo=None)
     message = update.effective_message
 

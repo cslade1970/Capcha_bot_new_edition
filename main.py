@@ -85,9 +85,9 @@ def banUser():
                     dispatcher.bot.delete_message(
                         ban["chat_id"], ban["captcha_message_id"]
                     )
-                except BadRequest:
+                except:
                     logger.exception(
-                        f"Can't kick user user_id={ban['user_id']}, message_id={ban['captcha_message_id']}"
+                        f"Can't delete message user_id={ban['user_id']}, message_id={ban['captcha_message_id']}"
                     )
 
 

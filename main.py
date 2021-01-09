@@ -87,7 +87,7 @@ def banUser():
                     )
                 except:
                     logger.exception(
-                        f"Can't delete message user_id={ban['user_id']}, message_id={ban['captcha_message_id']}"
+                        f"Can't delete message user_id={ban['user_id']}, message_id={ban['captcha_message_id']}, chat_id={ban['chat_id']}"
                     )
 
 

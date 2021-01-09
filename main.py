@@ -19,7 +19,7 @@ from telegram.ext import (
 
 CAPTCHA_REPLY_TIMEOUT = 2  # minutes
 
-logging.basicConfig()
+logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger()
 
 

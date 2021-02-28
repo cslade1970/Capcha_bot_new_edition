@@ -2,6 +2,8 @@ FROM python:alpine
 
 WORKDIR /app
 
+ENV CRYPTOGRAPHY_DONT_BUILD_RUST=1
+
 COPY ./requirements.txt /app/requirements.txt
 RUN \
     /sbin/apk add --no-cache python3 postgresql-libs && \

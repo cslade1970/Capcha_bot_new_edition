@@ -73,7 +73,7 @@ def banUser():
                     "chat_id": banrecord[2],
                     "captcha_message_id": banrecord[3],
                 }
-                cur.execute("DELETE FROM banlist WHERE id=%s", (ban["id_record"],))
+                cur.execute("DELETE FROM banlist WHERE id=%s", (ban["id_record"]))
                 con.commit()
                 try:
                     dispatcher.bot.kick_chat_member(
@@ -157,7 +157,7 @@ def checkCorrectlyCaptcha(update, context):
 
     with closing(con.cursor()) as cur:
         cur.execute(
-            "SELECT answer FROM banlist WHERE user_id=%s AND captcha_message_id=%s AND chat_id=%s" % (user.id, message_id, chat.id),
+            "SELECT answer FROM banlist WHERE user_id=%s AND captcha_message_id=%s AND chat_id=%s" % (user.id, message_id, chat.id)
         )
         record = cur.fetchone()
 
@@ -203,7 +203,7 @@ def checkCorrectlyCaptcha(update, context):
                     except Exception:
                         username = "*какая-то undefined, а не ник*"
                 cur.execute(
-                    "UPDATE banlist SET time=%s WHERE user_id=%s AND chat_id=%s" % (int(time.time()) + 3*24*60*60, user.id, chat.id),
+                    "UPDATE banlist SET time=%s WHERE user_id=%s AND chat_id=%s" % (int(time.time()) + 3*24*60*60, user.id, chat.id)
                 )
             con.commit()
 
@@ -245,7 +245,7 @@ def unban(update, context):
         # Убираем из бд оставшиеся записи бана
         with closing(con.cursor()) as cur:
             cur.execute(
-                "SELECT captcha_message_id FROM banlist WHERE user_id=%s AND chat_id=%s" % (user_id, chat.id),
+                "SELECT captcha_message_id FROM banlist WHERE user_id=%s AND chat_id=%s" % (user_id, chat.id)
             )
             captcha_message_id = cur.fetchone()
 
@@ -256,7 +256,7 @@ def unban(update, context):
                     pass
 
             cur.execute(
-                "DELETE FROM banlist WHERE user_id=%s AND chat_id=%s" % (user_id, chat.id),
+                "DELETE FROM banlist WHERE user_id=%s AND chat_id=%s" % (user_id, chat.id)
             )
             con.commit()
 

@@ -2,7 +2,7 @@ FROM python:alpine3.12
 
 WORKDIR /app
 
-ENV CRYPTOGRAPHY_DONT_BUILD_RUST=1
+RUN rm -rf /usr/bin/lsb_release
 
 COPY ./requirements.txt /app/requirements.txt
 RUN \

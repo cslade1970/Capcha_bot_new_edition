@@ -73,7 +73,7 @@ def banUser():
                     "chat_id": banrecord[2],
                     "captcha_message_id": banrecord[3],
                 }
-                cur.execute("DELETE FROM banlist WHERE id=%s", (ban["id_record"]))
+                cur.execute("DELETE FROM banlist WHERE id=%s" % (ban["id_record"]))
                 con.commit()
                 try:
                     dispatcher.bot.kick_chat_member(

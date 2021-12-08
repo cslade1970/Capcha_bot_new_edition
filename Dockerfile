@@ -1,14 +1,11 @@
-FROM python:alpine3.12
+FROM python:alpine
 
 WORKDIR /app
 
-RUN rm -rf /usr/bin/lsb_release
-
+RUN /sbin/apk add --no-cache python3
 COPY ./requirements.txt /app/requirements.txt
-RUN \
-    /sbin/apk add --no-cache python3 && \
-    /usr/local/bin/pip install -r requirements.txt --no-cache-dir
+RUN /usr/local/bin/pip3 install -r requirements.txt --no-cache-dir
 
 COPY ./ /app
 
-CMD /usr/local/bin/python main.py
+CMD /usr/local/bin/python3 main.py

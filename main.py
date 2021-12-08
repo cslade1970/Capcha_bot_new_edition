@@ -2,10 +2,13 @@ import logging
 import os
 import threading
 import time
-from datetime import datetime, timedelta
+#from datetime import datetime, timedelta
+import time
 from random import randint
+from contextlib import closing
 
-import psycopg2
+import sqlite3
+
 from telegram import ChatPermissions, InlineKeyboardButton, InlineKeyboardMarkup, Update
 from telegram.error import BadRequest
 from telegram.ext import (
@@ -17,7 +20,8 @@ from telegram.ext import (
     Updater,
 )
 
-CAPTCHA_REPLY_TIMEOUT = 2  # minutes
+CAPTCHA_REPLY_TIMEOUT = 120  # minutes
+DB_FILE=os.environ.get("DB_FILE", './chatbot.db')
 
 logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger()
@@ -37,11 +41,8 @@ class FilterNewChatMembers(BaseFilter):
 
         if message.new_chat_members:
             # Проверка, если пользователю уже давалась капча
-            with con.cursor() as cur:
-                cur.execute(
-                    "SELECT id FROM banlist WHERE chat_id=%s AND user_id=%s",
-                    (chat_id, user_id),
-                )
+            with closing(con.cursor()) as cur:
+                cur.execute("SELECT id FROM banlist WHERE chat_id=%s AND user_id=%s" % (chat_id, user_id))
                 if cur.fetchone():
                     return False
 
@@ -61,9 +62,9 @@ def banUser():
     while True:
         time.sleep(30)
         logger.info("30s cycle of ban thread")
-        with con.cursor() as cur:
+        with closing(con.cursor()) as cur:
             cur.execute(
-                "SELECT id, user_id, chat_id, captcha_message_id FROM banlist WHERE time<LOCALTIMESTAMP"
+                "SELECT id, user_id, chat_id, captcha_message_id FROM banlist WHERE time<%s" % int(time.time())
             )
             for banrecord in cur.fetchall():
                 ban = {
@@ -102,9 +103,7 @@ def captcha(update: Update, context: CallbackContext):
     user = update.effective_user
     chat = update.effective_chat
     captcha_answer = randint(1, 8)
-    kick_date = (
-        datetime.now() + timedelta(minutes=CAPTCHA_REPLY_TIMEOUT)
-    ).replace(tzinfo=None)
+    kick_date = int(time.time())+CAPTCHA_REPLY_TIMEOUT
     message = update.effective_message
 
     if update.effective_user.username:
@@ -131,10 +130,10 @@ def captcha(update: Update, context: CallbackContext):
     #     "%s, выбери цифру %s" % (username, captcha_answers[captcha_answer]), reply_markup=keyboard
     # )
 
-    with con.cursor() as cur:
+    with closing(con.cursor()) as cur:
+        print("INSERT INTO banlist (user_id, time, chat_id, captcha_message_id, answer) VALUES (%s, %s, %s, %s, %s)" % (user.id, kick_date, chat.id, captcha_msg.message_id, captcha_answer))
         cur.execute(
-            "INSERT INTO banlist (user_id, time, chat_id, captcha_message_id, answer) VALUES (%s, %s, %s, %s, %s)",
-            (user.id, kick_date, chat.id, captcha_msg.message_id, captcha_answer),
+            "INSERT INTO banlist (user_id, time, chat_id, captcha_message_id, answer) VALUES (%s, %s, %s, %s, %s)" % (user.id, kick_date, chat.id, captcha_msg.message_id, captcha_answer)
         )
         con.commit()
 
@@ -156,10 +155,9 @@ def checkCorrectlyCaptcha(update, context):
     message_id = update.callback_query.message.message_id
     user_captcha_answer = update.callback_query.data
 
-    with con.cursor() as cur:
+    with closing(con.cursor()) as cur:
         cur.execute(
-            "SELECT answer FROM banlist WHERE user_id=%s AND captcha_message_id=%s AND chat_id=%s",
-            (user.id, message_id, chat.id),
+            "SELECT answer FROM banlist WHERE user_id=%s AND captcha_message_id=%s AND chat_id=%s" % (user.id, message_id, chat.id),
         )
         record = cur.fetchone()
 
@@ -169,8 +167,7 @@ def checkCorrectlyCaptcha(update, context):
             # Проверяю ответ пользователя на капчу
             if user_captcha_answer == str(record[0]):
                 cur.execute(
-                    "DELETE FROM banlist WHERE user_id=%s AND chat_id=%s",
-                    (user.id, chat.id),
+                    "DELETE FROM banlist WHERE user_id=%s AND chat_id=%s" % (user.id, chat.id),
                 )
                 context.bot.restrictChatMember(
                     chat.id,
@@ -181,6 +178,7 @@ def checkCorrectlyCaptcha(update, context):
                         can_send_polls=True,
                         can_send_other_messages=True,
                         can_add_web_page_previews=True,
+                        can_invite_users=True
                     ),
                 )
                 try:
@@ -205,8 +203,7 @@ def checkCorrectlyCaptcha(update, context):
                     except Exception:
                         username = "*какая-то undefined, а не ник*"
                 cur.execute(
-                    "UPDATE banlist SET time=%s WHERE user_id=%s AND chat_id=%s",
-                    (datetime.now(tz=None) + timedelta(days=3), user.id, chat.id),
+                    "UPDATE banlist SET time=%s WHERE user_id=%s AND chat_id=%s" % (int(time.time()) + 3*24*60*60, user.id, chat.id),
                 )
             con.commit()
 
@@ -241,14 +238,14 @@ def unban(update, context):
                 can_send_polls=True,
                 can_send_other_messages=True,
                 can_add_web_page_previews=True,
+                can_invite_users=True,
             ),
         )
 
         # Убираем из бд оставшиеся записи бана
-        with con.cursor() as cur:
+        with closing(con.cursor()) as cur:
             cur.execute(
-                "SELECT captcha_message_id FROM banlist WHERE user_id=%s AND chat_id=%s",
-                (user_id, chat.id),
+                "SELECT captcha_message_id FROM banlist WHERE user_id=%s AND chat_id=%s" % (user_id, chat.id),
             )
             captcha_message_id = cur.fetchone()
 
@@ -259,8 +256,7 @@ def unban(update, context):
                     pass
 
             cur.execute(
-                "DELETE FROM banlist WHERE user_id=%s AND chat_id=%s",
-                (user_id, chat.id),
+                "DELETE FROM banlist WHERE user_id=%s AND chat_id=%s" % (user_id, chat.id),
             )
             con.commit()
 
@@ -286,14 +282,26 @@ def main():
 
 if __name__ == "__main__":
     # Connect to DB
-    logger.info("Connecting to PG")
-    con = psycopg2.connect(
-        database=os.getenv("PG_DATABASE", "captcha"),
-        user=os.getenv("PG_USER", "captcha"),
-        password=os.getenv("PG_PASSWORD", "secret"),
-        host=os.getenv("PG_HOST", "postgres"),
-        port=os.getenv("PG_PORT", "5432"),
-    )
+    if not os.path.isfile(DB_FILE):
+        con = sqlite3.connect(DB_FILE, check_same_thread=False)
+        cur = con.cursor()
+        cur.execute(
+            """
+            CREATE TABLE banlist
+            (id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+            user_id INT NOT NULL,
+            time timestamp NOT NULL,
+            chat_id BIGINT NOT NULL,
+            captcha_message_id INT NOT NULL,
+            answer INT NOT NULL);
+        """
+        )
+
+        con.commit()
+
+        con.close()
+        
+    con = sqlite3.connect(DB_FILE, check_same_thread=False)
 
     # Словарь для конвертация цифр на слова
     captcha_answers = {

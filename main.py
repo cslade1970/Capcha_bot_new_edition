@@ -178,7 +178,9 @@ def checkCorrectlyCaptcha(update, context):
                         can_send_polls=True,
                         can_send_other_messages=True,
                         can_add_web_page_previews=True,
-                        can_invite_users=True
+                        can_invite_users=True,
+                        can_change_info=True,
+                        can_pin_messages=True
                     ),
                 )
                 try:
@@ -233,12 +235,14 @@ def unban(update, context):
             chat.id,
             user_id,
             permissions=ChatPermissions(
-                can_send_messages=True,
-                can_send_media_messages=True,
-                can_send_polls=True,
-                can_send_other_messages=True,
-                can_add_web_page_previews=True,
-                can_invite_users=True,
+                        can_send_messages=True,
+                        can_send_media_messages=True,
+                        can_send_polls=True,
+                        can_send_other_messages=True,
+                        can_add_web_page_previews=True,
+                        can_invite_users=True,
+                        can_change_info=True,
+                        can_pin_messages=True
             ),
         )
 

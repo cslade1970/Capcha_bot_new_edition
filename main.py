@@ -76,7 +76,7 @@ def banUser():
                 cur.execute("DELETE FROM banlist WHERE id=%s" % (ban["id_record"]))
                 con.commit()
                 try:
-                    dispatcher.bot.kick_chat_member(
+                    dispatcher.bot.ban_chat_member(
                         chat_id=ban["chat_id"], user_id=ban["user_id"]
                     )
                 except Exception:
